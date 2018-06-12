@@ -1,0 +1,33 @@
+bzero() 会将内存块（字符串）的前n个字节清零，其原型为：
+    void bzero(void *s, int n);
+    
+memset将已开辟内存空间 s 的首 n 个字节的值设为值 c。
+  void *memset(void *s,int c,size_t n)
+  
+bzero
+用法：#include <string.h>
+原型：extern void bzero(void *s, int n);
+功能：置字节字符串s的前n个字节为零。    
+说明：bzero无返回值。
+
+memset  
+原型：extern void *memset(void *buffer, int c, int count);
+用法：#include <string.h>
+功能：把buffer所指内存区域的前count个字节设置成字符c。    
+说明：返回指向buffer的指针。
+
+setmem  
+原型：extern void setmem(void *buf, unsigned int count, char ch);          
+用法：#include <string.h>    
+功能：把buf所指内存区域前count个字节设置成字符ch。    
+说明：返回指向buf的指针。
+
+综述：
+bcopy和memcpy、bzero和memset、bcmp和memcmp的差别在哪里？
+bcopy、bzero和bcmp是传统BSD的函数，属于POSIX标准；mem*是C90(以及C99)标准的C函数。区别在于，如果你打算把程序弄到一个符合C90/C99，但是不符合POSIX标准的平台时，后者比较有优势。
+
+原型：extern void bzero（void *s, int n）;
+参数说明：s 要置零的数据的起始地址； n 要置零的数据字节个数。
+用法：#include <string.h>
+功能：置字节字符串s的前n个字节为零且包括‘\0’。
+说明：bzero无返回值，并且使用string.h头文件，string.h曾经是posix标准的一部分，但是在POSIX.1-2001标准里面，这些函数被标记为了遗留函数而不推荐使用。在POSIX.1-2008标准里已经没有这些函数了。推荐使用memset替代bzero。
