@@ -1,0 +1,133 @@
+以下是对字符串拷贝函数memcpy和strncpy以及snprintf它们之间的性能进行了比较，需要的朋友可以过来参考下
+
+问题：
+函数memcpy(dest, src, sizeof(dest))、strncpy(dest, src, sizeof(dest))和snprintf(dest, sizeof(dest), "%s", src)都可以将src字符串中的内容拷贝到dest字符串中。
+哪一种方式效率最高呢？
+就是说，哪种方式性能最好呢？
+解决办法：
+1. 建立三个文件test_memcpy.c，test_strncpy.c和test_snprintf.c：
+文件test_memcpy.c:
+
+复制代码 代码如下:
+david@u1110-hp:~/wrk/tmp/cstring$ cat test_memcpy.c
+#include <string.h>
+int main(){
+ char src[] = "1234567890";
+ char dest[2048];
+ int len = 0;
+ for(int i = 0; i < 10000000; ++i){
+  memset(dest, 0, sizeof(dest));
+  len = strlen(src);
+  len = sizeof(dest) - 1 > len? len: sizeof(dest) -1;
+  memcpy(dest, src, len);
+  dest[len] = '\0';
+ }
+ return 0;
+}
+
+文件test_strncpy.c:
+复制代码 代码如下:
+#include <string.h>
+int main() {
+ char src[] = "1234567890";
+ char dest[2048];
+ int len = 0;
+
+ for(int i = 0; i < 10000000; ++i) {
+  memset(dest, 0, sizeof(dest));
+  strncpy(dest, src, sizeof(dest));
+ }
+
+ return 0;
+}
+
+文件test_snprintf.c： 
+复制代码 代码如下:
+#include <stdio.h>
+#include <string.h>
+int main() {
+ char src[] = "1234567890";
+ char dest[2048];
+ int len = 0;
+
+ for(int i = 0; i < 10000000; ++i) {
+  memset(dest, 0, sizeof(dest));
+  snprintf(dest, sizeof(dest), "%s", src);
+ }
+
+ return 0;
+}
+
+2. 分别编译三个文件：
+复制代码 代码如下:
+david@u1110-hp:~/wrk/tmp/cstring$ gcc -std=c99 -o test_memcpy test_memcpy.c
+david@u1110-hp:~/wrk/tmp/cstring$ gcc -std=c99 -o test_strncpy test_strncpy.c
+david@u1110-hp:~/wrk/tmp/cstring$ gcc -std=c99 -o test_snprintf test_snprintf.c
+
+3. 没有优化的情况下不同函数消耗时间对比：
+复制代码 代码如下:
+david@u1110-hp:~/wrk/tmp/cstring$ time ./test_strncpy
+real 0m16.472s
+user 0m16.309s
+sys 0m0.036s
+david@u1110-hp:~/wrk/tmp/cstring$ time ./test_snprintf 
+real 0m6.106s
+user 0m6.100s
+sys 0m0.000s
+david@u1110-hp:~/wrk/tmp/cstring$ time ./test_memcpy 
+real 0m4.179s
+user 0m4.144s
+sys 0m0.000s
+david@u1110-hp:~/wrk/tmp/cstring$
+
+从上面运行结果可以看出：没有任何优化的情况下，memcpy()和strncpy()性能相差4倍，snprintf()和strncpy()性能相差约2.5倍。
+4.采用O3优化情况下不同函数消耗时间对比：
+
+复制代码 代码如下:
+david@u1110-hp:~/wrk/tmp/cstring$ gcc -std=c99 -O3 -o test_snprintf test_snprintf.c
+david@u1110-hp:~/wrk/tmp/cstring$ gcc -std=c99 -O3 -o test_strncpy test_strncpy.c
+david@u1110-hp:~/wrk/tmp/cstring$ gcc -std=c99 -O3 -o test_memcpy test_memcpy.c
+david@u1110-hp:~/wrk/tmp/cstring$
+
+复制代码 代码如下:
+david@u1110-hp:~/wrk/tmp/cstring$ time ./test_strncpy
+real 0m16.178s
+user 0m16.161s
+sys 0m0.000s
+david@u1110-hp:~/wrk/tmp/cstring$ time ./test_snprintf 
+real 0m6.242s
+user 0m6.032s
+sys 0m0.056s
+david@u1110-hp:~/wrk/tmp/cstring$ time ./test_memcpy 
+real 0m3.567s
+user 0m3.436s
+sys 0m0.012s
+david@u1110-hp:~/wrk/tmp/cstring$
+
+从上面运行结果可以看出：采用O3优化后，memcpy()和strncpy()性能相差近5倍，snprintf()和strncpy()性能相差基本不变约2.5倍。
+
+5. 性能对比结论：
+在需要用到字符串拷贝函数的时候，永远不要使用strncpy()，无论什么时候都用snprintf()来代替，而memcpy()是性能更好的实现方式。
+strlen+memcpy也是linux内核的实现方式。
+
+6. 意外收获结论：
+将上述三个文件中的memset()改为用bzero()来实现数组的清零操作。
+使用O3来进行优化，三个函数的耗时时间如下：
+复制代码 代码如下:
+
+david@u1110-hp:~/wrk/tmp/cstring$ time ./test_strncpy
+real 0m14.395s
+user 0m13.929s
+sys 0m0.092s
+david@u1110-hp:~/wrk/tmp/cstring$ time ./test_snprintf 
+real 0m3.785s
+user 0m3.772s
+sys 0m0.000s
+david@u1110-hp:~/wrk/tmp/cstring$ time ./test_memcpy 
+real 0m1.241s
+user 0m1.236s
+sys 0m0.004s
+david@u1110-hp:~/wrk/tmp/cstring$
+
+结论：仅仅换了一个清零函数，使得memcpy()和strncpy()的性能差别达到约12倍，而snprintf()和strncpy()的性能差别也达到约4倍。 
+就清零操作来说，bzero()远比memset()更高效。
