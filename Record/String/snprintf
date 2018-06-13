@@ -1,0 +1,2 @@
+snprintf使用的时候会自动补上‘\0’结尾
+snprintf不需要加\0, strncpy需要加\0
